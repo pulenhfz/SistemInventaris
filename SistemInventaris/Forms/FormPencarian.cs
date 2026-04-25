@@ -12,10 +12,25 @@ namespace SistemInventaris.Forms
 {
     public partial class FormPencarian : MaterialForm
     {
+        private System.Windows.Forms.Timer _debounceTimer = null!;
+        private bool _loadingKategori = false; // guard agar SelectedIndexChanged tidak fire saat LoadKategori
+
         public FormPencarian()
         {
             InitializeComponent();
             MaterialSkinManager.Instance.AddFormToManage(this);
+
+            // Inisialisasi debounce timer untuk live search
+            // Mencegah query ke DB setiap keystroke
+            _debounceTimer = new System.Windows.Forms.Timer();
+            _debounceTimer.Interval = 350; // tunggu 350ms setelah ketikan terakhir
+            _debounceTimer.Tick += (s, e) =>
+            {
+                _debounceTimer.Stop();
+                LoadData(txtCari.Text, GetSelectedKategoriID());
+            };
+
+            this.FormClosed += FormPencarian_FormClosed;
         }
 
         // ============================================================
@@ -32,23 +47,42 @@ namespace SistemInventaris.Forms
         /// </summary>
         private void LoadKategori()
         {
-            DataTable dt = DBHelper.GetDataTable(
-                "SELECT KategoriID, NamaKategori FROM Kategori ORDER BY NamaKategori");
+            _loadingKategori = true;
+            try
+            {
+                DataTable dt = DBHelper.GetDataTable(
+                    "SELECT KategoriID, NamaKategori FROM Kategori ORDER BY NamaKategori");
 
-            // Buat DataTable baru dengan baris "Semua Kategori" di posisi pertama
-            DataTable dtFilter = dt.Clone();
-            DataRow rowSemua   = dtFilter.NewRow();
-            rowSemua["KategoriID"]   = 0;
-            rowSemua["NamaKategori"] = "Semua Kategori";
-            dtFilter.Rows.Add(rowSemua);
+                // Buat DataTable baru dengan baris "Semua Kategori" di posisi pertama
+                DataTable dtFilter = dt.Clone();
+                DataRow rowSemua = dtFilter.NewRow();
+                rowSemua["KategoriID"] = 0;
+                rowSemua["NamaKategori"] = "Semua Kategori";
+                dtFilter.Rows.Add(rowSemua);
 
-            foreach (DataRow row in dt.Rows)
-                dtFilter.ImportRow(row);
+                foreach (DataRow row in dt.Rows)
+                    dtFilter.ImportRow(row);
 
-            cmbFilterKategori.DataSource    = dtFilter;
-            cmbFilterKategori.DisplayMember = "NamaKategori";
-            cmbFilterKategori.ValueMember   = "KategoriID";
-            cmbFilterKategori.SelectedIndex = 0;
+                cmbFilterKategori.DataSource = dtFilter;
+                cmbFilterKategori.DisplayMember = "NamaKategori";
+                cmbFilterKategori.ValueMember = "KategoriID";
+                cmbFilterKategori.SelectedIndex = 0;
+            }
+            finally
+            {
+                _loadingKategori = false;
+            }
+        }
+
+        /// <summary>
+        /// Membaca KategoriID yang dipilih dari ComboBox secara aman.
+        /// Menghindari InvalidCastException saat DataSource adalah DataTable.
+        /// </summary>
+        private int GetSelectedKategoriID()
+        {
+            if (cmbFilterKategori.SelectedItem is DataRowView row)
+                return Convert.ToInt32(row["KategoriID"]);
+            return 0;
         }
 
         /// <summary>
@@ -93,16 +127,20 @@ namespace SistemInventaris.Forms
             // Atur header kolom
             var headers = new Dictionary<string, string>
             {
-                { "KodeBarang",  "Kode Barang"  },
-                { "NamaBarang",  "Nama Barang"  },
-                { "NamaKategori","Kategori"     },
-                { "HargaSatuan", "Harga Satuan" }
+                { "KodeBarang",   "Kode Barang"  },
+                { "NamaBarang",   "Nama Barang"  },
+                { "NamaKategori", "Kategori"     },
+                { "HargaSatuan",  "Harga Satuan" }
             };
             foreach (var kv in headers)
                 if (dgvHasil.Columns.Contains(kv.Key))
                     dgvHasil.Columns[kv.Key].HeaderText = kv.Value;
 
             StyleGrid(dgvHasil);
+
+            // Format kolom Harga Satuan sebagai Rupiah (tanpa desimal)
+            if (dgvHasil.Columns.Contains("HargaSatuan"))
+                dgvHasil.Columns["HargaSatuan"].DefaultCellStyle.Format = "N0";
 
             // Update label total hasil
             lblTotal.Text = $"Total: {dt.Rows.Count} barang ditemukan";
@@ -135,20 +173,15 @@ namespace SistemInventaris.Forms
             dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         }
 
-        private int GetSelectedKategoriID()
-        {
-            if (cmbFilterKategori.SelectedValue != null)
-                return Convert.ToInt32(cmbFilterKategori.SelectedValue);
-            return 0;
-        }
-
         // ============================================================
         // EVENT: TextChanged - Live search saat pengguna mengetik
         // Pencarian langsung tanpa perlu klik tombol Cari
         // ============================================================
         private void txtCari_TextChanged(object sender, EventArgs e)
         {
-            LoadData(txtCari.Text, GetSelectedKategoriID());
+            // Reset timer setiap kali ada keystroke baru (debounce pattern)
+            _debounceTimer.Stop();
+            _debounceTimer.Start();
         }
 
         // ============================================================
@@ -156,6 +189,8 @@ namespace SistemInventaris.Forms
         // ============================================================
         private void cmbFilterKategori_SelectedIndexChanged(object sender, EventArgs e)
         {
+            // Abaikan event yang terpicu saat LoadKategori sedang berjalan
+            if (_loadingKategori) return;
             LoadData(txtCari.Text, GetSelectedKategoriID());
         }
 
@@ -175,6 +210,11 @@ namespace SistemInventaris.Forms
             txtCari.Text = "";
             cmbFilterKategori.SelectedIndex = 0;
             LoadData("", 0);
+        }
+
+        private void FormPencarian_FormClosed(object? sender, FormClosedEventArgs e)
+        {
+            _debounceTimer?.Dispose();
         }
     }
 }

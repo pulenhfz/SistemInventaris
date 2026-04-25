@@ -53,12 +53,16 @@ namespace SistemInventaris.Forms
                 return;
             }
 
+            // Hash password sebelum dibandingkan dengan database
+            // Password disimpan sebagai SHA256 hash di tabel Users
+            string hashedPassword = DBHelper.HashPassword(txtPassword.Text);
+
             // Query dengan parameter untuk mencegah SQL Injection
             string query = "SELECT UserID, NamaLengkap, Role FROM Users WHERE Username=@u AND Password=@p";
             SqlParameter[] param =
             {
                 new SqlParameter("@u", txtUsername.Text.Trim()),
-                new SqlParameter("@p", txtPassword.Text)
+                new SqlParameter("@p", hashedPassword)
             };
 
             DataTable dt = DBHelper.GetDataTable(query, param);

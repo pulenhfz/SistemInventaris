@@ -4,6 +4,8 @@
 // ============================================================
 using System.Data;
 using System.Data.SqlClient;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace SistemInventaris
 {
@@ -17,7 +19,7 @@ namespace SistemInventaris
         // Connection string ke SQL Server lokal
         // Ganti "." dengan nama server Anda jika perlu (misal: .\SQLEXPRESS)
         private static readonly string connectionString =
-            "Server=.;Database=InventarisDB;Integrated Security=True;TrustServerCertificate=True";
+            "Server=(localdb)\\MSSQLLocalDB;Database=InventarisDB;Integrated Security=True;TrustServerCertificate=True";
 
         /// <summary>
         /// Membuat dan mengembalikan objek SqlConnection baru.
@@ -106,6 +108,17 @@ namespace SistemInventaris
                     "Error Database", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Menghasilkan hash SHA256 dari password (hex string 64 karakter).
+        /// Gunakan ini saat menyimpan atau memverifikasi password.
+        /// </summary>
+        public static string HashPassword(string password)
+        {
+            byte[] inputBytes = Encoding.UTF8.GetBytes(password);
+            byte[] hashBytes = SHA256.HashData(inputBytes);
+            return Convert.ToHexString(hashBytes).ToLower();
         }
     }
 }

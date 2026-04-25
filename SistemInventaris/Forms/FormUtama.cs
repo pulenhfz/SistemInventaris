@@ -37,6 +37,25 @@ namespace SistemInventaris.Forms
         {
             lblWelcome.Text = $"Selamat Datang, {_namaUser}  |  Role: {_roleUser}";
             LoadData();
+            TerapkanHakAkses();
+        }
+
+        /// <summary>
+        /// Mengatur visibilitas tombol CRUD berdasarkan role pengguna.
+        /// Hanya Admin yang boleh menambah, mengedit, dan menghapus barang.
+        /// </summary>
+        private void TerapkanHakAkses()
+        {
+            bool isAdmin = _roleUser.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+            btnTambah.Enabled = isAdmin;
+            btnEdit.Enabled = isAdmin;
+            btnHapus.Enabled = isAdmin;
+
+            if (!isAdmin)
+            {
+                // Beri tahu pengguna bahwa akses CRUD dibatasi
+                lblWelcome.Text += "  |  [Hanya Lihat]";
+            }
         }
 
         /// <summary>
@@ -64,6 +83,10 @@ namespace SistemInventaris.Forms
 
             // Terapkan gaya modern pada DataGridView
             StyleGrid(dgvBarang);
+
+            // Format kolom Harga Satuan sebagai Rupiah (tanpa desimal)
+            if (dgvBarang.Columns.Contains("HargaSatuan"))
+                dgvBarang.Columns["HargaSatuan"].DefaultCellStyle.Format = "N0";
         }
 
         private void SetColumnHeaders()
@@ -89,31 +112,31 @@ namespace SistemInventaris.Forms
         private void StyleGrid(DataGridView dgv)
         {
             dgv.BackgroundColor = Color.White;
-            dgv.BorderStyle     = BorderStyle.None;
-            dgv.GridColor       = Color.FromArgb(220, 220, 230);
+            dgv.BorderStyle = BorderStyle.None;
+            dgv.GridColor = Color.FromArgb(220, 220, 230);
 
             // Header: latar Indigo, teks putih, tebal
             dgv.EnableHeadersVisualStyles = false;
-            dgv.ColumnHeadersDefaultCellStyle.BackColor   = Color.FromArgb(63, 81, 181); // Indigo
-            dgv.ColumnHeadersDefaultCellStyle.ForeColor   = Color.White;
-            dgv.ColumnHeadersDefaultCellStyle.Font        = new Font("Segoe UI", 10F, FontStyle.Bold);
-            dgv.ColumnHeadersDefaultCellStyle.Alignment   = DataGridViewContentAlignment.MiddleCenter;
+            dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(63, 81, 181); // Indigo
+            dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgv.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dgv.ColumnHeadersHeight = 36;
 
             // Sel default
-            dgv.DefaultCellStyle.Font                = new Font("Segoe UI", 9.5F);
-            dgv.DefaultCellStyle.SelectionBackColor  = Color.FromArgb(230, 230, 250);
-            dgv.DefaultCellStyle.SelectionForeColor  = Color.Black;
-            dgv.DefaultCellStyle.Padding             = new Padding(3);
+            dgv.DefaultCellStyle.Font = new Font("Segoe UI", 9.5F);
+            dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(230, 230, 250);
+            dgv.DefaultCellStyle.SelectionForeColor = Color.Black;
+            dgv.DefaultCellStyle.Padding = new Padding(3);
 
             // Warna selang-seling baris
             dgv.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 255);
 
-            dgv.RowHeadersVisible    = false;
-            dgv.AllowUserToAddRows   = false;
-            dgv.ReadOnly             = true;
-            dgv.SelectionMode        = DataGridViewSelectionMode.FullRowSelect;
-            dgv.AutoSizeColumnsMode  = DataGridViewAutoSizeColumnsMode.Fill;
+            dgv.RowHeadersVisible = false;
+            dgv.AllowUserToAddRows = false;
+            dgv.ReadOnly = true;
+            dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         }
 
         // ============================================================
@@ -158,7 +181,7 @@ namespace SistemInventaris.Forms
             }
 
             string namaBarang = dgvBarang.SelectedRows[0].Cells["NamaBarang"].Value.ToString()!;
-            int    barangID   = Convert.ToInt32(dgvBarang.SelectedRows[0].Cells["BarangID"].Value);
+            int barangID = Convert.ToInt32(dgvBarang.SelectedRows[0].Cells["BarangID"].Value);
 
             // Konfirmasi penghapusan
             DialogResult result = MessageBox.Show(

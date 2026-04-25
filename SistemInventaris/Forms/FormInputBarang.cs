@@ -41,9 +41,49 @@ namespace SistemInventaris.Forms
             cmbSatuan.Items.AddRange(new object[] { "Pcs", "Unit", "Box", "Set", "Kg", "Rim" });
             cmbSatuan.SelectedIndex = 0;
 
+            // Auto-generate kode barang hanya untuk mode Tambah
+            if (_mode == "Tambah")
+            {
+                txtKodeBarang.Text = GenerateKodeBarang();
+                txtKodeBarang.Enabled = false; // kode otomatis, tidak perlu diedit
+            }
+
             // Jika mode Edit, muat data barang yang ada
             if (_mode == "Edit" && _barangID > 0)
                 LoadBarangData();
+        }
+
+        /// <summary>
+        /// Membaca KategoriID yang dipilih dari ComboBox secara aman.
+        /// Menghindari InvalidCastException saat DataSource adalah DataTable.
+        /// </summary>
+        private int GetSelectedKategoriID()
+        {
+            if (cmbKategori.SelectedItem is DataRowView row)
+                return Convert.ToInt32(row["KategoriID"]);
+            return 0;
+        }
+
+        /// <summary>
+        /// Generate kode barang otomatis format BRG-XXX berdasarkan data terakhir di DB.
+        /// </summary>
+        private string GenerateKodeBarang()
+        {
+            object? result = DBHelper.ExecuteScalar(
+                "SELECT TOP 1 KodeBarang FROM Barang ORDER BY BarangID DESC");
+
+            if (result == null || result == DBNull.Value)
+                return "BRG-001";
+
+            string last = result.ToString()!;
+            // Ambil angka di belakang "BRG-"
+            if (last.StartsWith("BRG-") && int.TryParse(last.Substring(4), out int num))
+                return $"BRG-{(num + 1):D3}";
+
+            // Fallback: hitung total barang + 1
+            object? count = DBHelper.ExecuteScalar("SELECT COUNT(*) FROM Barang");
+            int next = Convert.ToInt32(count) + 1;
+            return $"BRG-{next:D3}";
         }
 
         /// <summary>
@@ -175,7 +215,7 @@ namespace SistemInventaris.Forms
             {
                 new SqlParameter("@kode",   SqlDbType.NVarChar) { Value = txtKodeBarang.Text.Trim() },
                 new SqlParameter("@nama",   SqlDbType.NVarChar) { Value = txtNamaBarang.Text.Trim() },
-                new SqlParameter("@katId",  SqlDbType.Int)      { Value = Convert.ToInt32(cmbKategori.SelectedValue) },
+                new SqlParameter("@katId",  SqlDbType.Int)      { Value = GetSelectedKategoriID() },
                 new SqlParameter("@stok",   SqlDbType.Int)      { Value = Convert.ToInt32(txtStok.Text) },
                 new SqlParameter("@harga",  SqlDbType.Decimal)  { Value = decimal.Parse(hargaStr, CultureInfo.InvariantCulture) },
                 new SqlParameter("@satuan", SqlDbType.NVarChar) { Value = cmbSatuan.SelectedItem!.ToString() }
