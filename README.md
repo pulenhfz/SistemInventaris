@@ -31,11 +31,14 @@ SiInventaris adalah aplikasi desktop berbasis **Windows Forms** yang dirancang u
 
 ## 🔄 Alur Penggunaan
 
-```
-Login → Dashboard (Lihat Data Barang) → Tambah/Edit/Hapus Barang
-                                      → Catat Transaksi
-                                      → Cari / Filter Data
-                                      → Logout
+```mermaid
+flowchart TD
+    A([Login]) --> B[Dashboard]
+    B --> C{Pilih Aksi}
+    C --> D[Tambah / Edit / Hapus Barang]
+    C --> E[Catat Transaksi]
+    C --> F[Cari / Filter Data]
+    D & E & F --> G([Logout])
 ```
 
 ---
@@ -64,26 +67,40 @@ Login → Dashboard (Lihat Data Barang) → Tambah/Edit/Hapus Barang
 
 ## 🗄️ Struktur Database
 
+```mermaid
+erDiagram
+    Users {
+        int UserID PK
+        string Username
+        string Password
+        string NamaLengkap
+        string Role
+    }
+
+    Kategori {
+        int KategoriID PK
+        string NamaKategori
+    }
+
+    Barang {
+        int BarangID PK
+        string KodeBarang
+        string NamaBarang
+        int Stok
+        decimal HargaSatuan
+        string Satuan
+        int KategoriID FK
+    }
+
+    Transaksi {
+        int TransaksiID PK
+        int BarangID FK
+        string JenisTransaksi
+        int Jumlah
+        datetime TanggalTransaksi
+        string Keterangan
+    }
+
+    Kategori ||--o{ Barang : "memiliki"
+    Barang ||--o{ Transaksi : "dicatat dalam"
 ```
-Users (standalone)
-Kategori ──(1:N)──► Barang ──(1:N)──► Transaksi
-```
-
-| Tabel | Kolom Utama |
-|---|---|
-| Users | UserID, Username, Password, NamaLengkap, Role |
-| Kategori | KategoriID, NamaKategori |
-| Barang | BarangID, KodeBarang, NamaBarang, Stok, HargaSatuan, Satuan, KategoriID (FK) |
-| Transaksi | TransaksiID, BarangID (FK), JenisTransaksi, Jumlah, TanggalTransaksi, Keterangan |
-
----
-
-## 👤 Author
-
-| | |
-|---|---|
-| **Nama** | *(Nama Lengkap)* |
-| **NIM** | *(NIM)* |
-| **Kelas** | TI24A / TI24B |
-| **Mata Kuliah** | Pemrograman Berbasis Event |
-| **Tugas** | Ujian Tengah Semester (UTS) |
